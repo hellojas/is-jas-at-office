@@ -153,7 +153,7 @@ function showError(message) {
 }
 
 function startListening() {
-    console.log('Starting Firebase listener...');
+    console.log('Starting db listener...');
     
     const statusRef = ref(database, 'locationStatus');
     
@@ -162,21 +162,21 @@ function startListening() {
         try {
             const data = snapshot.val();
             // Don't log the full data object with coordinates
-            console.log('Firebase data received:', data ? 'Status updated' : 'No data');
+            console.log('DB data received:', data ? 'Status updated' : 'No data');
             showStatus(data);
         } catch (error) {
-            console.error('Error processing Firebase data:', error);
+            console.error('Error processing db data:', error);
             showError('Error processing status data');
         }
     }, (error) => {
         console.error('Firebase listening error:', error);
-        showError(`Firebase connection error: ${error.message}`);
+        showError(`DB connection error: ${error.message}`);
     });
 }
 
 // Start listening when page loads
 window.addEventListener('load', function() {
-    console.log('Page loaded, starting Firebase listener...');
+    console.log('Page loaded, starting database listener...');
     
     // Easter egg for curious developers
     console.log('john get out of there 😸');
@@ -184,7 +184,7 @@ window.addEventListener('load', function() {
     try {
         startListening();
     } catch (error) {
-        console.error('Failed to initialize Firebase listener:', error);
+        console.error('Failed to initialize db listener:', error);
         showError('Failed to connect to Firebase');
     }
 });
@@ -194,5 +194,3 @@ window.addEventListener('beforeunload', function() {
     const statusRef = ref(database, 'locationStatus');
     off(statusRef);
 });
-
-console.log('lol.js setup complete');
