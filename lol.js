@@ -194,5 +194,3 @@ window.addEventListener('beforeunload', function() {
     const statusRef = ref(database, 'locationStatus');
     off(statusRef);
 });
-
-console.log('lol.js setup complete');
