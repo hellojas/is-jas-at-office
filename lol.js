@@ -53,12 +53,10 @@ function showStatus(data) {
     const subtitleEl = document.getElementById('subtitle');
     const detailsEl = document.getElementById('details');
     
-    if (!data) {
-        answerEl.textContent = '?';
-        answerEl.className = 'answer error';
-        subtitleEl.innerHTML = '<span class="live-indicator"></span>No data available';
-        detailsEl.innerHTML = '<div class="error">No status updates found</div>';
-        return;
+    // Check if we have valid data with required fields
+    if (!data || typeof data.at_work === 'undefined' || !data.location_type) {
+        console.log('Invalid or incomplete data, skipping update');
+        return; // Don't update UI with incomplete data
     }
     
     const isAtWork = data.at_work;
