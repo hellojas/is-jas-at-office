@@ -19,8 +19,8 @@ const database = getDatabase(app);
 
 // Target location coordinates
 const targetLocation = {
-    lat: 40.7420,
-    lng: -74.0059
+    lat: 40.741895,
+    lng: -74.004441
 };
 const allowedRadius = 100; // meters
 
