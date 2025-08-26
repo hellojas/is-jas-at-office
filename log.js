@@ -107,17 +107,23 @@ async function updateFirebase(currentLocation) {
         });
         
         const statusRef = ref(database, 'locationStatus');
+        const privateRef = ref(database, 'locationPrivate');
+        
+        // Public data (what lol.js will read)
         await set(statusRef, {
-            // Public data (what lol.js will read)
             location_type: locationInfo.type,
             at_work: locationInfo.isAtWork,
             distance_to_work: locationInfo.distance,
             timestamp: Date.now(),
-            lastUpdated: serverTimestamp(),
-            
-            // Private data (coordinates for your logs/analysis only)
+            lastUpdated: serverTimestamp()
+        });
+        
+        // Private data (coordinates for your analysis only)
+        await set(privateRef, {
             latitude: currentLocation.lat,
-            longitude: currentLocation.lng
+            longitude: currentLocation.lng,
+            location_type: locationInfo.type,
+            timestamp: Date.now()
         });
         
         document.getElementById('firebase-status').innerHTML = 
