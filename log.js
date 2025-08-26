@@ -17,12 +17,39 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Target location coordinates
-const targetLocation = {
-    lat: 40.741889,
-    lng: -74.000000
+// All location definitions (kept private in log.js)
+const locations = {
+    work: {
+        lat: 40.741889,
+        lng: -74.000000,
+        radius: 300, // A little more than 1 avenue (228.6m)
+        type: 'work'
+    },
+    music_studio: {
+        lat: 40.742352,
+        lng: -74.006210,
+        radius: 160.9, // 0.1 mile
+        type: 'music_studio'
+    },
+    home: {
+        lat: 40.716321,
+        lng: -73.948107,
+        radius: 160.9,
+        type: 'home'
+    },
+    gym: {
+        lat: 40.7168,
+        lng: -73.9542,
+        radius: 160.9,
+        type: 'gym'
+    },
+    gym2: {
+        lat: 40.7181,
+        lng: -73.9929,
+        radius: 160.9,
+        type: 'gym'
+    }
 };
-const allowedRadius = 300; // meters to span one avenue (228.6)
 
 function calculateDistance(lat1, lng1, lat2, lng2) {
     const R = 6371e3; // Earth's radius in meters
@@ -39,60 +66,108 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
     return R * c;
 }
 
-async function updateFirebase(isAtLocation, location, distance) {
+function determineLocationType(currentLat, currentLng) {
+    // Check each location to see if we're within range
+    for (const [key, location] of Object.entries(locations)) {
+        const distance = calculateDistance(
+            currentLat, currentLng, 
+            location.lat, location.lng
+        );
+        
+        if (distance <= location.radius) {
+            return {
+                type: location.type,
+                distance: Math.round(distance),
+                isAtWork: location.type === 'work'
+            };
+        }
+    }
+    
+    // Default case - not at any known location
+    const workDistance = calculateDistance(
+        currentLat, currentLng,
+        locations.work.lat, locations.work.lng
+    );
+    
+    return {
+        type: 'other',
+        distance: Math.round(workDistance),
+        isAtWork: false
+    };
+}
+
+async function updateFirebase(currentLocation) {
     try {
-        // Only log status info, not coordinates
-        console.log('Updating DB...', { isAtLocation, distance: Math.round(distance) });
+        const locationInfo = determineLocationType(currentLocation.lat, currentLocation.lng);
+        
+        console.log('Updating DB...', { 
+            locationType: locationInfo.type, 
+            distance: locationInfo.distance,
+            isAtWork: locationInfo.isAtWork
+        });
+        
         const statusRef = ref(database, 'locationStatus');
         await set(statusRef, {
-            atLocation: isAtLocation,
-            latitude: location.lat,
-            longitude: location.lng,
-            distance: Math.round(distance),
+            // Public data (what lol.js will read)
+            location_type: locationInfo.type,
+            at_work: locationInfo.isAtWork,
+            distance_to_work: locationInfo.distance,
+            timestamp: Date.now(),
             lastUpdated: serverTimestamp(),
-            timestamp: Date.now()
+            
+            // Private data (coordinates for your logs/analysis only)
+            latitude: currentLocation.lat,
+            longitude: currentLocation.lng
         });
         
         document.getElementById('firebase-status').innerHTML = 
-            `<span style="color: #2ecc71;">✓ Firebase updated</span>`;
+            `<span style="color: #2ecc71;">✓ DB updated</span>`;
         console.log('DB update successful');
         return true;
     } catch (error) {
         console.error('DB update failed:', error);
         document.getElementById('firebase-status').innerHTML = 
-            `<span style="color: #e74c3c;">✗ Firebase error: ${error.message}</span>`;
+            `<span style="color: #e74c3c;">✗ DB error: ${error.message}</span>`;
         return false;
     }
 }
 
-function showResult(isWithinRange, distance, currentLocation) {
-    // Only log status info, not coordinates
-    console.log('Showing result:', { isWithinRange, distance: Math.round(distance) });
+function showResult(currentLocation) {
+    const locationInfo = determineLocationType(currentLocation.lat, currentLocation.lng);
+    
+    console.log('Location determined:', { 
+        type: locationInfo.type,
+        distance: locationInfo.distance,
+        isAtWork: locationInfo.isAtWork
+    });
     
     const answerEl = document.getElementById('answer');
     const subtitleEl = document.getElementById('subtitle');
     const detailsEl = document.getElementById('details');
     
-    answerEl.textContent = isWithinRange ? 'AT LOCATION' : 'NOT AT LOCATION';
-    answerEl.className = `answer ${isWithinRange ? 'yes' : 'no'}`;
+    answerEl.textContent = locationInfo.isAtWork ? 'AT WORK' : 'NOT AT WORK';
+    answerEl.className = `answer ${locationInfo.isAtWork ? 'yes' : 'no'}`;
+    
+    const typeDisplay = locationInfo.type.replace('_', ' ').toUpperCase();
     
     subtitleEl.innerHTML = `
         <span class="live-indicator"></span>
-        ${isWithinRange ? 'You are at the target location' : 'You are away from target location'} - Updating Firebase...
+        Location: ${typeDisplay} - Updating DB...
     `;
     
-    const distanceText = distance < 1000 ? 
-        `${Math.round(distance)} meters` : 
-        `${(distance/1000).toFixed(1)} kilometers`;
+    const distanceText = locationInfo.distance < 1000 ? 
+        `${locationInfo.distance} meters` : 
+        `${(locationInfo.distance/1000).toFixed(1)} kilometers`;
     
     detailsEl.innerHTML = `
-        Distance from target: ${distanceText}<br>
-        Your coordinates: ${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)}<br>
+        Location type: ${typeDisplay}<br>
+        Distance to work: ${distanceText}<br>
+        Coordinates: ${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)}<br>
         Last checked: ${new Date().toLocaleTimeString()}
     `;
     
-    // Update Firebase with status
-    updateFirebase(isWithinRange, currentLocation, distance);
+    // Update Firebase with all data
+    updateFirebase(currentLocation);
 }
 
 function showError(message) {
@@ -107,7 +182,7 @@ function showError(message) {
     subtitleEl.textContent = 'Unable to determine location';
     detailsEl.innerHTML = `<div class="error">${message}</div>`;
     document.getElementById('firebase-status').innerHTML = 
-        `<span style="color: #f39c12;">⚠ Cannot update Firebase - location unknown</span>`;
+        `<span style="color: #f39c12;">⚠ Cannot update DB - location unknown</span>`;
 }
 
 function checkLocation() {
@@ -135,13 +210,7 @@ function checkLocation() {
                 lng: position.coords.longitude
             };
             
-            const distance = calculateDistance(
-                currentLocation.lat, currentLocation.lng,
-                targetLocation.lat, targetLocation.lng
-            );
-            
-            const isWithinRange = distance <= allowedRadius;
-            showResult(isWithinRange, distance, currentLocation);
+            showResult(currentLocation);
         },
         function(error) {
             console.error('Geolocation error:', error);
@@ -167,8 +236,8 @@ function checkLocation() {
     );
 }
 
-// Initialize Firebase status
-document.getElementById('firebase-status').textContent = 'Firebase initialized';
+// Initialize status
+document.getElementById('firebase-status').textContent = 'DB initialized';
 
 // Check location when page loads
 window.addEventListener('load', function() {
@@ -176,7 +245,7 @@ window.addEventListener('load', function() {
     checkLocation();
 });
 
-// Re-check and update Firebase every 30 seconds
+// Re-check and update DB every 30 seconds
 setInterval(checkLocation, 30000);
 
 console.log('log.js setup complete');
