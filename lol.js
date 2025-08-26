@@ -1,4 +1,36 @@
-// Firebase configuration
+function startListening() {
+    console.log('Starting DB listener...');
+    
+    const statusRef = ref(database, 'locationStatus');
+    
+    // Listen for real-time updates
+    onValue(statusRef, (snapshot) => {
+        try {
+            const data = snapshot.val();
+            console.log('Raw Firebase data:', data);
+            
+            if (data) {
+                // Only log that we received data, not the actual coordinates
+                console.log('DB data received: Status updated');
+                showStatus(data);
+            } else {
+                console.log('DB data received: No data');
+                // Show error state only if we truly have no data
+                const answerEl = document.getElementById('answer');
+                const subtitleEl = document.getElementById('subtitle');
+                const detailsEl = document.getElementById('details');
+                
+                answerEl.textContent = '?';
+                answerEl.className = 'answer error';
+                subtitleEl.innerHTML = '<span class="live-indicator"></span>No data available';
+                detailsEl.innerHTML = '<div class="error">No status updates found</div>';
+            }
+        } catch (error) {
+            console.error('Error processing DB data:', error);
+            showError('Error processing status data');
+        }
+    }, (error) => {
+        console.// Firebase configuration
 import { initializeApp as initApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getDatabase, ref, onValue, off } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
@@ -109,13 +141,35 @@ function startListening() {
     
     const statusRef = ref(database, 'locationStatus');
     
-    // Listen for real-time updates
+    // Listen for real-time updates with once() for initial load to ensure complete data
     onValue(statusRef, (snapshot) => {
         try {
             const data = snapshot.val();
-            // Only log that we received data, not the actual coordinates
-            console.log('DB data received:', data ? 'Status updated' : 'No data');
-            showStatus(data);
+            console.log('Raw Firebase data:', data);
+            
+            if (!data) {
+                console.log('DB data received: No data');
+                // Show error state only if we truly have no data
+                const answerEl = document.getElementById('answer');
+                const subtitleEl = document.getElementById('subtitle');
+                const detailsEl = document.getElementById('details');
+                
+                answerEl.textContent = '?';
+                answerEl.className = 'answer error';
+                subtitleEl.innerHTML = '<span class="live-indicator"></span>No data available';
+                detailsEl.innerHTML = '<div class="error">No status updates found</div>';
+                return;
+            }
+            
+            // Validate that we have the essential fields before processing
+            if (data.hasOwnProperty('at_work') && data.hasOwnProperty('location_type')) {
+                console.log('DB data received: Complete status updated');
+                showStatus(data);
+            } else {
+                console.log('DB data received: Incomplete data, waiting for complete update');
+                // Don't update UI with incomplete data, keep previous state
+            }
+            
         } catch (error) {
             console.error('Error processing DB data:', error);
             showError('Error processing status data');
