@@ -17,65 +17,14 @@ const firebaseConfig = {
 const app = initApp(firebaseConfig);
 const database = getDatabase(app);
 
-function calculateDistance(lat1, lng1, lat2, lng2) {
-    const R = 6371e3; // Earth's radius in meters
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lng2-lng1) * Math.PI/180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c;
-}
-
-function getLocationMessage(isAtLocation, latitude, longitude) {
-    if (isAtLocation) {
-        return "Jas is present, her soul is not.";
-    }
-    
-    // Check for specific locations when not at office
-    const locations = [
-        {
-            // 75 9th Ave, New York, NY 10011 (Chelsea Market - Music Studio)
-            lat: 40.742352,
-            lng: -74.006210,
-            message: "🎶 Currently in a meeting with Bass, Guitar, and Saxophone."
-        },
-        {
-            lat: 40.716321,
-            lng: -73.948107,
-            message: "🏠 Today's commute: 12 steps."
-        },
-        {
-            // 221 N 14th St, Brooklyn, NY 11249 (climbing gym)
-            lat: 40.7168,
-            lng: -73.9542,
-            message: "🧗 Jas is upgrading her grip strength instead of her career."
-        },
-        {
-            // 182 Broome St, New York, NY 10002 (climbing gym)
-            lat: 40.7181,
-            lng: -73.9929,
-            message: "🧗 Jas is upgrading her grip strength instead of her career."
-        }
-    ];
-    
-    const radiusMeters = 160.9; // 0.1 mile in meters
-    
-    for (const location of locations) {
-        const distance = calculateDistance(latitude, longitude, location.lat, location.lng);
-        if (distance <= radiusMeters) {
-            return location.message;
-        }
-    }
-    
-    // Default message when not at any special location
-    return "🦄 Galavanting with a donut";
-}
+// Location-specific messages (no coordinates needed!)
+const locationMessages = {
+    work: "Jas is present, her soul is not.",
+    music_studio: "🎶 Currently in a meeting with Bass, Guitar, and Saxophone.",
+    home: "🏠 Today's commute: 12 steps.",
+    gym: "🧗 Jas is upgrading her grip strength instead of her career.",
+    other: "🦄 Galavanting with a donut"
+};
 
 function formatTimestamp(timestamp) {
     if (!timestamp) return 'Unknown';
@@ -92,10 +41,11 @@ function formatTimestamp(timestamp) {
 }
 
 function showStatus(data) {
-    // Only log status info, not coordinates
+    // Only log non-sensitive status info (no coordinates!)
     console.log('Showing status:', { 
-        atLocation: data?.atLocation, 
-        distance: data?.distance,
+        location_type: data?.location_type, 
+        at_work: data?.at_work,
+        distance: data?.distance_to_work,
         hasData: !!data 
     });
     
@@ -111,32 +61,36 @@ function showStatus(data) {
         return;
     }
     
-    const isAtLocation = data.atLocation;
-    const latitude = data.latitude;
-    const longitude = data.longitude;
+    const isAtWork = data.at_work;
+    const locationType = data.location_type || 'other';
     
-    // Show "No, :)" when NOT at location, "Yes, :(" when AT location
-    answerEl.textContent = isAtLocation ? 'Yes, :(' : 'No, :)';
-    answerEl.className = `answer ${isAtLocation ? 'yes' : 'no'}`;
+    // Show "No, :)" when NOT at work, "Yes, :(" when AT work
+    answerEl.textContent = isAtWork ? 'Yes, :(' : 'No, :)';
+    answerEl.className = `answer ${isAtWork ? 'yes' : 'no'}`;
     
-    // Get custom message based on location
-    const locationMessage = getLocationMessage(isAtLocation, latitude, longitude);
+    // Get custom message based on location type (no coordinates needed!)
+    const locationMessage = locationMessages[locationType] || locationMessages.other;
     
     subtitleEl.innerHTML = `
         <span class="live-indicator"></span>
         ${locationMessage}
     `;
     
-    const distanceText = data.distance ? 
-        (data.distance < 1000 ? `${data.distance}m` : `${(data.distance/1000).toFixed(1)}km`) : 
+    const distanceText = data.distance_to_work ? 
+        (data.distance_to_work < 1000 ? `${data.distance_to_work}m` : `${(data.distance_to_work/1000).toFixed(1)}km`) : 
         'Unknown';
     
     const lastUpdated = formatTimestamp(data.timestamp);
     
-    detailsEl.innerHTML = `
-        Distance from target: ${distanceText}<br>
-        Last updated: ${lastUpdated}
-    `;
+    // Only show distance if not at work
+    if (isAtWork) {
+        detailsEl.innerHTML = `Last updated: ${lastUpdated}`;
+    } else {
+        detailsEl.innerHTML = `
+            Distance from work: ${distanceText}<br>
+            Last updated: ${lastUpdated}
+        `;
+    }
 }
 
 function showError(message) {
@@ -161,7 +115,7 @@ function startListening() {
     onValue(statusRef, (snapshot) => {
         try {
             const data = snapshot.val();
-            // Don't log the full data object with coordinates
+            // Only log that we received data, not the actual coordinates
             console.log('DB data received:', data ? 'Status updated' : 'No data');
             showStatus(data);
         } catch (error) {
@@ -194,3 +148,5 @@ window.addEventListener('beforeunload', function() {
     const statusRef = ref(database, 'locationStatus');
     off(statusRef);
 });
+
+console.log('lol.js setup complete');
