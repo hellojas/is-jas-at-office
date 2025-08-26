@@ -19,8 +19,8 @@ const database = getDatabase(app);
 
 // Target location coordinates
 const targetLocation = {
-    lat: 40.741895,
-    lng: -74.004441
+    lat: 40.741889,
+    lng: -74.000000
 };
 const allowedRadius = 250; // meters to span one avenue (228.6)
 
