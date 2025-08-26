@@ -22,7 +22,7 @@ const targetLocation = {
     lat: 40.741895,
     lng: -74.004441
 };
-const allowedRadius = 100; // meters
+const allowedRadius = 250; // meters to span one avenue (228.6)
 
 function calculateDistance(lat1, lng1, lat2, lng2) {
     const R = 6371e3; // Earth's radius in meters
