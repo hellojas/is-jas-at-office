@@ -74,9 +74,8 @@ function showStatus(data) {
         ${locationMessage}
     `;
     
-    const distanceInMiles = data.distance_to_work * 0.000621371;
     const distanceText = data.distance_to_work ? 
-        `${distanceInMiles.toFixed(1)} miles` : 
+        `${(data.distance_to_work * 0.000621371).toFixed(2)} miles` : 
         'Unknown';
     
     const lastUpdated = formatTimestamp(data.timestamp);
