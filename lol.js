@@ -75,7 +75,7 @@ function showStatus(data) {
     `;
     
     const distanceText = data.distance_to_work ? 
-        (data.distance_to_work < 1000 ? `${data.distance_to_work}m` : `${(data.distance_to_work/1000).toFixed(1)}km`) : 
+        (data.distance_to_work < 1609 ? `${(data.distance_to_work * 0.000621371).toFixed(1)} miles` : `${(data.distance_to_work * 0.000621371).toFixed(1)} miles`) : 
         'Unknown';
     
     const lastUpdated = formatTimestamp(data.timestamp);
