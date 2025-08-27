@@ -67,6 +67,12 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 }
 
 function determineLocationType(currentLat, currentLng) {
+    // Always calculate distance to work first
+    const workDistance = calculateDistance(
+        currentLat, currentLng,
+        locations.work.lat, locations.work.lng
+    );
+    
     // Check each location to see if we're within range
     for (const [key, location] of Object.entries(locations)) {
         const distance = calculateDistance(
@@ -77,21 +83,16 @@ function determineLocationType(currentLat, currentLng) {
         if (distance <= location.radius) {
             return {
                 type: location.type,
-                distance: Math.round(distance),
+                distance: Math.round(workDistance), // Always distance to work, not to matched location
                 isAtWork: location.type === 'work'
             };
         }
     }
     
     // Default case - not at any known location
-    const workDistance = calculateDistance(
-        currentLat, currentLng,
-        locations.work.lat, locations.work.lng
-    );
-    
     return {
         type: 'other',
-        distance: Math.round(workDistance),
+        distance: Math.round(workDistance), // Distance to work
         isAtWork: false
     };
 }
