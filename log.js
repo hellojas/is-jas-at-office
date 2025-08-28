@@ -22,7 +22,7 @@ const locations = {
     work: {
         lat: 40.741889,
         lng: -74.000000,
-        radius: 300, // A little more than 1 avenue (228.6m)
+        radius: 325, // A little more than 1 avenue (228.6m)
         type: 'work'
     },
     music_studio: {
